@@ -38,6 +38,7 @@ from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
 import numpy as np
 import torch
+from pygments.formatters import img
 from scipy import linalg
 from imageio import imread
 from torch.nn.functional import adaptive_avg_pool2d
@@ -46,7 +47,8 @@ try:
     from tqdm import tqdm
 except ImportError:
     # If not tqdm is not available, provide a mock version of it
-    def tqdm(x): return x
+    def tqdm(x):
+        return x
 
 from inception import InceptionV3
 
@@ -107,9 +109,13 @@ def get_activations(files, model, batch_size=50, dims=2048,
         start = i * batch_size
         end = start + batch_size
 
-        images = np.array([imread(str(f)).astype(np.float32)
-                           for f in files[start:end]])
+        # Scaling images 
+        images = scale_images(
+            np.array([imread(str(f)).astype(np.float32)
+                      for f in files[start:end]]), (299, 299, 3)
+        )
 
+        assert len(set({image.shape for image in images})) == 1, set({image.shape for image in images})
         # Reshape to (n_images, 3, height, width)
         images = images.transpose((0, 3, 1, 2))
         images /= 255
@@ -131,6 +137,17 @@ def get_activations(files, model, batch_size=50, dims=2048,
         print(' done')
 
     return pred_arr
+
+
+def scale_images(images, new_shape):
+    images_list = list()
+    for image in images:
+        # resize with nearest neighbor interpolation
+        # originally scikit.resize
+        new_image = np.resize(image, new_shape)
+        # store
+        images_list.append(new_image)
+    return np.asarray(images_list)
 
 
 def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
@@ -222,7 +239,8 @@ def _compute_statistics_of_path(path, model, batch_size, dims, cuda):
         f.close()
     else:
         path = pathlib.Path(path)
-        files = list(path.glob('*.jpg')) + list(path.glob('*.png'))
+
+        files = list(path.glob('**/*.jpg')) + list(path.glob('**/*.png'))
         m, s = calculate_activation_statistics(files, model, batch_size,
                                                dims, cuda)
 
