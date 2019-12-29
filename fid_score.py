@@ -67,7 +67,7 @@ parser.add_argument('-c', '--gpu', default='', type=str,
 
 
 def get_activations(files, model, batch_size=50, dims=2048,
-                    cuda=False, verbose=False):
+                    cuda=False, verbose=False, img_width=32, img_height=32):
     """Calculates the activations of the pool_3 layer for all images.
 
     Params:
@@ -109,10 +109,9 @@ def get_activations(files, model, batch_size=50, dims=2048,
         start = i * batch_size
         end = start + batch_size
 
-        # Scaling images 
         images = scale_images(
             np.array([imread(str(f)).astype(np.float32)
-                      for f in files[start:end]]), (299, 299, 3)
+                      for f in files[start:end]]), (img_width, img_height, 3)
         )
 
         assert len(set({image.shape for image in images})) == 1, set({image.shape for image in images})
